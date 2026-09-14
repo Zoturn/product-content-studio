@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Emits .next/standalone — a self-contained server bundle the Dockerfile copies, so the runtime
+  // image does not need a full node_modules tree.
+  output: 'standalone',
 };
 
 export default nextConfig;

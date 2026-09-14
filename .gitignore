@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — ignore every variant by default, so a new .env.local can never be
+# committed by accident. The documented, secret-free template is the one exception.
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +41,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code — machine-local permission allowlist, not shared config
+.claude/settings.local.json
+
+# editor/IDE
+.idea/
+.vscode/
+
+# cypress artifacts
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/

@@ -1,0 +1,42 @@
+schema: spec-driven
+
+context: |
+  Project: Product Content Studio — a small product-card editor for an online store.
+  An admin signs in, edits a product's description and SEO fields, and moves it between
+  draft and published. Visitors browse a catalog of published products and open their pages.
+
+  Single Next.js application (no monorepo, npm):
+    src/app/(public)   catalog and product pages, server-rendered for SEO
+    src/app/admin      private editor, behind auth
+    src/app/api        REST route handlers — the only HTTP surface
+    src/lib            prisma client, auth, zod validation, product services
+    prisma             schema, migrations, deterministic seed
+
+  Stack: Next.js 15 (App Router) + React 19 + TypeScript strict + MUI v9 (Emotion).
+  Prisma 7 + PostgreSQL in Docker Compose. Zod 4 for validation.
+
+  Auth: one seeded admin, email + password (bcryptjs), stateless JWT in an httpOnly
+  cookie, verified by middleware AND again inside every admin route handler.
+
+  Testing: Jest for logic and services; Cypress for HTTP behaviour and user flows.
+  Tests run offline with no external service or API key.
+
+  Conventions:
+    - Conventional Commits.
+    - CLAUDE.md carries orientation and a rule index only; detail lives in
+      .claude/rules/*.md and is referenced by path.
+    - Repeated automation lives in Claude Code hooks, never as prose inside a rule.
+
+rules:
+  proposal:
+    - Keep the proposal under 300 words; the "how" belongs in design.md.
+    - Always name the capabilities the change creates or modifies.
+  specs:
+    - Every requirement needs at least one scenario using exactly four hashtags (#### Scenario:).
+    - Cover the failure and edge-case scenario, not just the happy path.
+    - State what a caller must NOT be able to observe, not only what they can.
+  design:
+    - Record the alternatives considered for each decision, not just the choice.
+  tasks:
+    - Group tasks by layer (data, api, ui, tests, docs) and order them by dependency.
+    - Every change ends with a task group that runs the suites and refreshes documentation.

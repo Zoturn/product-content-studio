@@ -1,0 +1,13 @@
+# Normalise to LF in the repository and in working copies. Without this, a checkout on Windows
+# rewrites the hook scripts with CRLF and `#!/usr/bin/env bash` fails with a bad interpreter.
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
