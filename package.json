@@ -50,6 +50,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cypress": "^16.0.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
     "eslint-config-prettier": "^10.1.8",

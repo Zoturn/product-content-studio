@@ -10,12 +10,16 @@
 const config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/prisma'],
+  setupFiles: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/?(*.)+(spec).[jt]s?(x)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
-    '^.+\\.tsx?$': [
+    // Matches .js too, not just .ts(x): jose ships ESM-only, and this is what lets ts-jest
+    // (with allowJs) convert its .js files to CommonJS instead of Jest trying to require() them
+    // directly and failing.
+    '^.+\\.(t|j)sx?$': [
       'ts-jest',
       {
         tsconfig: {
@@ -27,6 +31,8 @@ const config = {
       },
     ],
   },
+  // node_modules is ignored by default; carve out jose so the transform above actually reaches it.
+  transformIgnorePatterns: ['node_modules/(?!(jose)/)'],
   clearMocks: true,
   collectCoverageFrom: ['src/lib/**/*.ts', '!src/lib/**/*.spec.ts'],
 };
