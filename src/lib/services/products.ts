@@ -2,9 +2,7 @@ import { Prisma, ProductStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import type { ProductUpdateInput } from '@/lib/validation/product';
 
-// All product queries live here — see .claude/rules/prisma-data-model.md. add-public-catalog
-// extends this file with the published-only read path; nothing here filters by status yet
-// because this change has no public-facing surface.
+// All product queries live here — see .claude/rules/prisma-data-model.md.
 
 export type ProductListItem = {
   id: string;
@@ -78,4 +76,50 @@ export async function updateProduct(
     }
     throw error;
   }
+}
+
+// --- Published-only reads: the single choke point every public caller goes through. ---
+// See .claude/rules/prisma-data-model.md rule 4 and openspec/changes/.../design.md — the status
+// constraint lives inside the query, never as a check bolted on after a plain lookup. The
+// catalogue page, the product page, generateMetadata and both public API routes all call these
+// two functions; none of them may write its own `where` clause for status.
+
+export type PublishedProductListItem = {
+  slug: string;
+  name: string;
+};
+
+export function getPublishedProducts(): Promise<PublishedProductListItem[]> {
+  return prisma.product.findMany({
+    where: { status: ProductStatus.PUBLISHED },
+    select: { slug: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
+export type PublishedProduct = {
+  slug: string;
+  name: string;
+  attributes: unknown;
+  description: string;
+  seoTitle: string;
+  seoDescription: string;
+};
+
+// findFirst with status in the where clause, not findUnique followed by a status check — a
+// filter in the query cannot be skipped by an early return or a refactor that drops the check.
+// Returns null identically for a draft slug and an unknown slug, so callers (the page's
+// notFound(), the public API's 404) cannot tell the two apart either.
+export function getPublishedProductBySlug(slug: string): Promise<PublishedProduct | null> {
+  return prisma.product.findFirst({
+    where: { slug, status: ProductStatus.PUBLISHED },
+    select: {
+      slug: true,
+      name: true,
+      attributes: true,
+      description: true,
+      seoTitle: true,
+      seoDescription: true,
+    },
+  });
 }

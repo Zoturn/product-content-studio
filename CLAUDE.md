@@ -51,7 +51,7 @@ Each change is archived before the next begins.
 | 1     | `add-project-foundation`   | Product/AdminUser schema, first migration, deterministic seed |
 | 2     | `add-admin-authentication` | sign in and out, session cookie, guarded admin routes         |
 | 3     | `add-product-editing`      | product list, editor, validation, admin REST endpoints        |
-| 4     | `add-public-catalog`       | catalog, product page, SEO metadata, draft gating, README     |
+| 4     | `add-public-catalog`       | catalog, product page, SEO metadata, draft-gated public API   |
 
 ## Rules
 

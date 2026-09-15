@@ -1,17 +1,21 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { updateProduct } from './products';
+import { updateProduct, getPublishedProducts, getPublishedProductBySlug } from './products';
 import type { ProductUpdateInput } from '@/lib/validation/product';
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     product: {
       update: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
   },
 }));
 
 const mockedUpdate = prisma.product.update as jest.Mock;
+const mockedFindMany = prisma.product.findMany as jest.Mock;
+const mockedFindFirst = prisma.product.findFirst as jest.Mock;
 
 const input: ProductUpdateInput = {
   description: 'Updated description.',
@@ -62,5 +66,45 @@ describe('updateProduct', () => {
     mockedUpdate.mockRejectedValueOnce(new Error('connection lost'));
 
     await expect(updateProduct('product-1', input)).rejects.toThrow('connection lost');
+  });
+});
+
+describe('getPublishedProducts', () => {
+  it('filters to published in the query, not by post-filtering the result', async () => {
+    mockedFindMany.mockResolvedValueOnce([
+      { slug: 'wireless-mouse', name: 'Aurora Wireless Mouse' },
+    ]);
+
+    await getPublishedProducts();
+
+    expect(mockedFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: 'PUBLISHED' },
+      }),
+    );
+  });
+});
+
+describe('getPublishedProductBySlug', () => {
+  it('puts the status constraint inside the query', async () => {
+    mockedFindFirst.mockResolvedValueOnce(null);
+
+    await getPublishedProductBySlug('wireless-mouse');
+
+    expect(mockedFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { slug: 'wireless-mouse', status: 'PUBLISHED' },
+      }),
+    );
+  });
+
+  it('resolves null for a draft slug, exactly as for an unknown slug', async () => {
+    // The query itself excludes drafts, so Prisma finding nothing IS the draft case — this
+    // test documents that null covers both "draft" and "doesn't exist" from the caller's side.
+    mockedFindFirst.mockResolvedValueOnce(null);
+
+    const result = await getPublishedProductBySlug('smart-desk-lamp');
+
+    expect(result).toBeNull();
   });
 });

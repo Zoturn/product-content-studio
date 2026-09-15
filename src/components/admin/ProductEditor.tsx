@@ -26,18 +26,7 @@ import {
 } from '@/lib/api/adminProducts';
 import { ApiError } from '@/lib/api/client';
 import { QueryState } from '@/components/admin/QueryState';
-
-// Prisma's Json scalar has no shape guarantee at the type level (src/lib/services/products.ts
-// types it `unknown`, deliberately, rather than the hand-typed `Record<string, unknown>` this
-// component used to assume). Narrow before treating it as an object, rather than crash on
-// Object.entries if it were ever something else — see the "attributes has no runtime shape
-// validation" finding from the full-project review.
-function asAttributeEntries(attributes: unknown): [string, unknown][] {
-  if (attributes && typeof attributes === 'object' && !Array.isArray(attributes)) {
-    return Object.entries(attributes);
-  }
-  return [];
-}
+import { asAttributeEntries } from '@/lib/attributes';
 
 export function ProductEditor({ productId }: { productId: string }) {
   const queryClient = useQueryClient();

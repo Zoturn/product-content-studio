@@ -15,6 +15,13 @@ RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
+# next build imports every route module to collect its page data, which imports src/lib/env.ts,
+# which validates at import time — so the build needs *some* value here even though nothing is
+# actually queried during the build. The container gets the real values at runtime from
+# docker-compose.yml's `environment:` block on the app service; env.ts re-validates fresh on
+# every process start, so these placeholders never reach a real request.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV JWT_SECRET="build-time-placeholder-overridden-at-container-runtime"
 RUN npm run build
 
 FROM node:22-alpine AS runner
