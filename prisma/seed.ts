@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '../src/lib/auth/password';
 import { products } from './seed-data';
 
 const prisma = new PrismaClient();
@@ -17,11 +17,14 @@ function requireEnv(name: string): string {
 }
 
 async function main() {
-  const adminEmail = requireEnv('ADMIN_EMAIL');
+  // Lowercased at creation, matching the case-insensitive lookup in
+  // src/lib/auth/credentials.ts — the seeded account and a login attempt agree on case
+  // regardless of how ADMIN_EMAIL happens to be cased in .env.
+  const adminEmail = requireEnv('ADMIN_EMAIL').trim().toLowerCase();
   const adminPassword = requireEnv('ADMIN_PASSWORD');
 
   // Hashed at seed time from configuration — no plaintext or hash is ever committed.
-  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  const passwordHash = await hashPassword(adminPassword);
 
   const admin = await prisma.adminUser.upsert({
     where: { email: adminEmail },
@@ -30,13 +33,19 @@ async function main() {
   });
   console.log(`Admin ready: ${admin.email}`);
 
-  for (const product of products) {
-    const saved = await prisma.product.upsert({
-      where: { slug: product.slug },
-      update: product,
-      create: product,
-    });
-    console.log(`Product ready: ${saved.slug} (${saved.status})`);
+  // Independent writes to unrelated rows — parallel rather than the sequential round trips a
+  // for-of loop would pay.
+  const saved = await Promise.all(
+    products.map((product) =>
+      prisma.product.upsert({
+        where: { slug: product.slug },
+        update: product,
+        create: product,
+      }),
+    ),
+  );
+  for (const product of saved) {
+    console.log(`Product ready: ${product.slug} (${product.status})`);
   }
 }
 

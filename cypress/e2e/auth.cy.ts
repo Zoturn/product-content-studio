@@ -18,8 +18,20 @@ describe('admin sign-in', () => {
     cy.get('input[name="password"]').type(admin.password);
     cy.get('button[type="submit"]').click();
 
-    cy.location('pathname').should('eq', '/admin');
-    cy.contains(`Signed in as ${admin.email}`);
+    // /admin redirects to /admin/products — see add-product-editing task 4.4.
+    cy.location('pathname').should('eq', '/admin/products');
+    cy.contains('Products');
+  });
+
+  it('signs in with a capitalized email, matching the lowercase-stored account', () => {
+    // Regression test: email lookup used to be case-sensitive, so a correct password against a
+    // differently-cased email (autofill/autocapitalize) was refused as "incorrect credentials."
+    const capitalized = admin.email.replace(/^./, (c) => c.toUpperCase());
+    cy.get('input[name="email"]').type(capitalized);
+    cy.get('input[name="password"]').type(admin.password);
+    cy.get('button[type="submit"]').click();
+
+    cy.location('pathname').should('eq', '/admin/products');
   });
 
   it('shows an error and stays on sign-in for a wrong password', () => {

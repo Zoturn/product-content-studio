@@ -62,6 +62,22 @@ describe('verifyCredentials', () => {
     expect(JSON.stringify(result)).not.toContain(passwordHash);
   });
 
+  it('looks up the email case-insensitively, so a capitalized submission still matches', async () => {
+    const passwordHash = await hashPassword('correct-horse');
+    mockedFindUnique.mockResolvedValueOnce({
+      id: 'admin-1',
+      email: 'admin@example.com',
+      passwordHash,
+    });
+
+    const result = await verifyCredentials('Admin@Example.com', 'correct-horse');
+
+    expect(mockedFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'admin@example.com' } }),
+    );
+    expect(result).toEqual({ valid: true, admin: { id: 'admin-1', email: 'admin@example.com' } });
+  });
+
   // Proves the timing mitigation is actually exercised, not just that the outcome is right —
   // see design.md's "One refusal for both unknown email and wrong password".
   it('still runs a bcrypt compare for an unknown email, rather than short-circuiting', async () => {

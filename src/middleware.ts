@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, verifySession } from '@/lib/auth/session';
+import { unauthorizedResponse } from '@/lib/api/errors';
 
 // A coarse first gate — see .claude/rules/nextjs-app-router.md. Every /api/admin/** handler
 // calls requireAdmin() itself as well, so this matcher being right is an optimisation, not the
@@ -26,12 +27,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // API callers get 401 JSON, never a redirect — a redirect to an HTML page is not something an
-  // API client can interpret. Page requests redirect to sign-in.
+  // API client can interpret. Page requests redirect to sign-in. Reuses the same envelope
+  // builder every route handler uses, rather than a second hand-built copy of the same shape.
   if (pathname.startsWith('/api/')) {
-    return NextResponse.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } },
-      { status: 401 },
-    );
+    return unauthorizedResponse();
   }
 
   return NextResponse.redirect(new URL('/admin/login', request.url));

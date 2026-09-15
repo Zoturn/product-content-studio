@@ -1,4 +1,4 @@
-import { hashPassword, verifyPassword } from './password';
+import { hashPassword, verifyPassword, hashPasswordSync } from './password';
 
 describe('password hashing', () => {
   it('round-trips: a hash verifies against the plaintext it was made from', async () => {
@@ -17,5 +17,10 @@ describe('password hashing', () => {
       hashPassword('same-password'),
     ]);
     expect(a).not.toBe(b);
+  });
+
+  it('hashPasswordSync produces a hash verifyPassword accepts', async () => {
+    const hash = hashPasswordSync('correct-horse-battery-staple');
+    await expect(verifyPassword('correct-horse-battery-staple', hash)).resolves.toBe(true);
   });
 });

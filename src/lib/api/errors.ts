@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 // The shared shape for every non-2xx JSON response. See .claude/rules/api-and-validation.md.
 export type ApiErrorCode = 'VALIDATION_ERROR' | 'UNAUTHORIZED' | 'NOT_FOUND';
@@ -25,6 +26,16 @@ export function validationErrorResponse(
     { error: { code: 'VALIDATION_ERROR', message, fieldErrors } },
     { status: 400 },
   );
+}
+
+// A .strict() schema rejecting an unknown key (e.g. a PATCH body carrying the read-only `name`)
+// produces a Zod issue with no field path — z.flattenError() puts that in `formErrors`, not
+// `fieldErrors`. Folding formErrors into the message is what keeps it from being silently
+// dropped, since the error envelope has nowhere else to carry it.
+export function validationErrorFromZod(error: z.ZodError): NextResponse<ApiErrorBody> {
+  const { formErrors, fieldErrors } = z.flattenError(error);
+  const message = formErrors.length > 0 ? formErrors.join(' ') : 'Some fields need attention.';
+  return validationErrorResponse(fieldErrors, message);
 }
 
 export function notFoundResponse(message = 'Not found.'): NextResponse<ApiErrorBody> {

@@ -18,7 +18,8 @@ Cypress.Commands.add('loginAsAdmin', () => {
     cy.get('input[name="email"]').type(email);
     cy.get('input[name="password"]').type(password);
     cy.get('button[type="submit"]').click();
-    cy.location('pathname').should('eq', '/admin');
+    // /admin redirects to /admin/products — see add-product-editing task 4.4.
+    cy.location('pathname').should('eq', '/admin/products');
   });
 });
 
