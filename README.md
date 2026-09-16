@@ -174,5 +174,6 @@ and directed work, and concrete examples of AI-code decisions with how they were
 
 ## Time spent
 
-Approximately 8 hours, as tracked by the candidate. All four planned OpenSpec changes shipped;
-no bonus was attempted beyond the Docker Compose "full" profile above.
+Approximately 9 hours, as tracked by the candidate. All four planned OpenSpec changes shipped, plus
+a fifth added after manual testing (a way back to the catalogue from a product page). No bonus was
+attempted beyond the Docker Compose "full" profile above.
