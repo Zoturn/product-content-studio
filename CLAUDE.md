@@ -46,12 +46,13 @@ Changes start as an OpenSpec proposal, not as code. Read
 [.claude/rules/openspec-workflow.md](.claude/rules/openspec-workflow.md) before starting anything.
 Each change is archived before the next begins.
 
-| Order | Change                     | Delivers                                                      |
-| ----- | -------------------------- | ------------------------------------------------------------- |
-| 1     | `add-project-foundation`   | Product/AdminUser schema, first migration, deterministic seed |
-| 2     | `add-admin-authentication` | sign in and out, session cookie, guarded admin routes         |
-| 3     | `add-product-editing`      | product list, editor, validation, admin REST endpoints        |
-| 4     | `add-public-catalog`       | catalog, product page, SEO metadata, draft-gated public API   |
+| Order | Change                            | Delivers                                                      |
+| ----- | --------------------------------- | ------------------------------------------------------------- |
+| 1     | `add-project-foundation`          | Product/AdminUser schema, first migration, deterministic seed |
+| 2     | `add-admin-authentication`        | sign in and out, session cookie, guarded admin routes         |
+| 3     | `add-product-editing`             | product list, editor, validation, admin REST endpoints        |
+| 4     | `add-public-catalog`              | catalog, product page, SEO metadata, draft-gated public API   |
+| 5     | `add-catalogue-return-navigation` | a way back to the catalogue from a product page               |
 
 ## Rules
 
