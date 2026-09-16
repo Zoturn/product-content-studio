@@ -114,15 +114,20 @@ the application at all. It was a blind spot in the tests.
 
 Admin routes are guarded twice on purpose: `middleware.ts` matches `/api/admin/:path*`, and every
 handler additionally calls `requireAdmin()` itself. Every test of unauthenticated access goes over
-real HTTP — which means the middleware answers all of them before the handler ever runs. Delete
-the `requireAdmin()` call from a route handler and all 28 end-to-end tests still pass. The
-redundancy that the whole auth design rests on was, in testing terms, invisible.
+real HTTP — which means the middleware answers all of them before the handler ever runs, and
+nothing in the end-to-end suite can tell whether the handler would have refused on its own. The
+redundancy the whole auth design rests on was, in testing terms, invisible.
 
 That is not theoretical here. This project shipped `middleware.ts` at the repo root for a while,
 where Next silently never registers it (example 1 above) — and during that window the in-handler
 checks were the only thing between a signed-out request and admin data. The suite gave no signal
 either way. The fix is a Jest test that calls the exported handlers directly, with no middleware
 in the path, and asserts both that they answer 401 and that they never reach the data layer.
+
+I then checked that the new test is worth having, by deleting both `requireAdmin()` calls and
+running it: all four of its assertions fail — the handlers answer 404 and 400 instead of 401, and
+the service mock records a call it should never have seen. A test that has never been watched to
+fail is not yet evidence of anything, and this one had to earn the claim I am making for it.
 
 The same pass also found a stale "Saved." banner that stayed on screen while the user typed their
 next edit (a false confirmation sitting above unsaved changes — the exact failure the project's
