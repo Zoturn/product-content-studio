@@ -74,6 +74,13 @@ openspec/                    the four change proposals this project was built fr
   administrator, who never changes, and no requirement to revoke or enumerate sessions. Verified
   twice per admin request: once by `middleware.ts` as a coarse gate, and again explicitly inside
   every `/api/admin/**` handler, so authorization never depends on a matcher pattern being correct.
+- **Signing in survives a visit to the public side.** An administrator who leaves `/admin` to browse
+  the public catalogue is not signed out, and returning to `/admin` finds them still signed in. The
+  session is an httpOnly cookie with a fixed two-hour lifetime; the public pages never read it,
+  never refresh it, and never clear it. Nothing about the catalogue is affected by whether a session
+  exists — it renders identically for an administrator and a stranger — so the two sides of the app
+  can be used in one browser without interfering with each other. Signing out is the explicit
+  control in the admin area, and nothing else ends a session early.
 - **Validation is one Zod schema**, imported by both the editor's form and the route handler that
   actually enforces it — the brief requires invalid data be rejected even from a direct API call,
   so the server-side check is the real gate and the client-side one is UX only.
@@ -114,7 +121,7 @@ and never reach the data layer.
 - `npm run typecheck` — clean
 - `npm run lint` — clean
 - `npm test` — 67 passed, 67 total
-- `npm run e2e` — 29 passed, 29 total (9 spec files: auth, access control, session-cookie
+- `npm run e2e` — 31 passed, 31 total (9 spec files: auth, access control, session-cookie
   security, product editing via the UI and directly against the API, the admin product list, the
   public catalogue, the public product page, and draft gating)
 - `npm run build` — clean; the built client bundle was grepped for `JWT_SECRET`, `ADMIN_PASSWORD`

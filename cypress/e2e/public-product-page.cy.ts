@@ -7,6 +7,29 @@ describe('public product page', () => {
     cy.contains('A quiet, low-latency mouse');
   });
 
+  it('returns to the catalogue from a product opened by following a link', () => {
+    cy.visit('/');
+    cy.contains('a', 'Aurora Wireless Mouse').click();
+    cy.location('pathname').should('eq', '/products/wireless-mouse');
+
+    cy.contains('a', 'Back to products').click();
+
+    cy.location('pathname').should('eq', '/');
+    cy.contains('Aurora Wireless Mouse');
+    cy.contains('Cascade Mechanical Keyboard');
+  });
+
+  it('returns to the catalogue from a product opened directly by URL', () => {
+    // The case a router.back() implementation would get wrong: arriving from a search result or a
+    // pasted link, there is no history entry to go back to.
+    cy.visit('/products/wireless-mouse');
+
+    cy.contains('a', 'Back to products').click();
+
+    cy.location('pathname').should('eq', '/');
+    cy.contains('Aurora Wireless Mouse');
+  });
+
   it('uses the saved SEO fields as the document title and meta description', () => {
     cy.visit('/products/wireless-mouse');
 

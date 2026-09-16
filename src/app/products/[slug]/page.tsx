@@ -1,11 +1,13 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
+import MuiLink from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { getPublishedProductBySlug } from '@/lib/services/products';
-import { asAttributeEntries } from '@/lib/attributes';
+import { formatAttributes } from '@/lib/attributes';
 
 // Rendered per request, not cached — matches the catalogue. See
 // openspec/changes/add-public-catalog/design.md.
@@ -45,13 +47,17 @@ export default async function ProductPage({ params }: PageParams) {
   return (
     <Container maxWidth="md">
       <Box sx={{ py: { xs: 4, md: 8 } }}>
+        {/* A real link rather than router.back(): this page is reachable directly by URL and by
+            a search result, where there is no history to go back to. next/link also keeps the
+            page a Server Component — navigation is not interactivity. */}
+        <MuiLink component={Link} href="/" sx={{ display: 'inline-block', mb: 2 }}>
+          ← Back to products
+        </MuiLink>
         <Typography variant="h1" gutterBottom>
           {product.name}
         </Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>
-          {asAttributeEntries(product.attributes)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(' · ')}
+          {formatAttributes(product.attributes)}
         </Typography>
         {/* A text child, never dangerouslySetInnerHTML — React escapes this automatically, so
             author-typed markup (e.g. a <script> payload) renders as inert visible text. Line
