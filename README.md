@@ -101,12 +101,20 @@ mocked) — fast, no boundary to cross. Cypress for everything that crosses one:
 service, no API key, and Cypress runs against a database reset and reseeded immediately beforehand
 (`npm run db:reset`), so every assertion starts from the same known fixtures.
 
+One deliberate exception to that split: `src/app/api/admin/products/[id]/route.spec.ts` unit-tests
+a route handler, which would normally be Cypress's job. It exists because the thing being tested
+is invisible over HTTP. Admin routes are guarded twice — by `middleware.ts` and by a `requireAdmin()`
+call inside each handler — and the middleware answers every unauthenticated request before the
+handler runs, so removing the in-handler guard leaves the entire end-to-end suite green. That spec
+calls the handlers directly, with no middleware in the path, and asserts they refuse on their own
+and never reach the data layer.
+
 **Actual results**, from a clean `db:reset`:
 
 - `npm run typecheck` — clean
 - `npm run lint` — clean
-- `npm test` — 61 passed, 61 total
-- `npm run e2e` — 28 passed, 28 total (9 spec files: auth, access control, session-cookie
+- `npm test` — 67 passed, 67 total
+- `npm run e2e` — 29 passed, 29 total (9 spec files: auth, access control, session-cookie
   security, product editing via the UI and directly against the API, the admin product list, the
   public catalogue, the public product page, and draft gating)
 - `npm run build` — clean; the built client bundle was grepped for `JWT_SECRET`, `ADMIN_PASSWORD`
@@ -134,9 +142,11 @@ Recorded as design decisions during the build rather than left for a reader to d
   solving a problem this brief doesn't have.
 - **No pagination or search in either the admin list or the public catalogue.** Fine for three
   seeded products; the first thing to add if this ever serves a real catalogue.
-- **Two accepted `npm audit` advisories**, both build-time only, never in a code path a request
-  reaches: `deepmerge-ts` (via the Prisma CLI's own config loader) and `postcss` (bundled inside
-  Next). Both proposed fixes are downgrades — to Prisma 6.12.0 and to Next 16 respectively — that
+- **Two accepted vulnerable build-time dependencies**, neither in a code path a request reaches:
+  `deepmerge-ts` (via the Prisma CLI's own config loader) and `postcss` (bundled inside Next).
+  `npm audit` summarises this as "5 vulnerabilities" because it also counts the dependents that
+  pull them in — `deepmerge-ts` → `@prisma/config` → `prisma`, and `postcss` → `next`. Two
+  packages, five flagged entries. Both proposed fixes are downgrades — to Prisma 6.12.0 and to Next 16 respectively — that
   were deliberately rejected elsewhere in this project for stability and AI-tooling-compatibility
   reasons (see `AI-WORKLOG.md`). Chasing them would mean re-introducing problems already solved.
 

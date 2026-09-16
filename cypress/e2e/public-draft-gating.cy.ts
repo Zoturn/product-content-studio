@@ -25,55 +25,46 @@ describe('drafts are unreachable from the public side', () => {
     );
   });
 
-  it('removes a product from the catalogue and 404s its page the moment it is unpublished', () => {
-    cy.loginAsAdmin();
+  describe('when a published product is unpublished', () => {
+    // A hook rather than a restore at the end of the test body: an assertion failing partway
+    // would skip an inline restore and leave the keyboard a draft for every later spec.
+    afterEach(() => {
+      cy.restoreSeededProduct('Cascade Mechanical Keyboard');
+    });
 
-    cy.request('/api/admin/products').then((listResponse) => {
-      const summary = (listResponse.body as Array<{ id: string; name: string }>).find(
-        (p) => p.name === 'Cascade Mechanical Keyboard',
-      );
+    it('removes it from the catalogue and 404s its page immediately', () => {
+      cy.loginAsAdmin();
 
-      cy.request(`/api/admin/products/${summary!.id}`).then((getResponse) => {
-        const body = getResponse.body as {
-          description: string;
-          seoTitle: string;
-          seoDescription: string;
-        };
-        // Only the four fields PATCH accepts — the GET response also carries id/slug/name/
-        // attributes, and the schema is .strict(), so spreading the whole body would be
-        // rejected as an attempt to write the read-only fields.
-        const editable = {
-          description: body.description,
-          seoTitle: body.seoTitle,
-          seoDescription: body.seoDescription,
-        };
+      // Starts visible.
+      cy.visit('/');
+      cy.contains('Cascade Mechanical Keyboard');
 
-        // Starts visible.
-        cy.visit('/');
-        cy.contains('Cascade Mechanical Keyboard');
-
-        cy.request('PATCH', `/api/admin/products/${summary!.id}`, {
-          ...editable,
-          status: 'DRAFT',
-        }).then(() => {
-          // Gone from the catalogue and 404 on its page — no ISR window, per force-dynamic.
-          cy.visit('/');
-          cy.contains('Cascade Mechanical Keyboard').should('not.exist');
-
-          cy.request({ url: '/products/mechanical-keyboard', failOnStatusCode: false })
-            .its('status')
-            .should('eq', 404);
-
-          // Restore, so later specs (and a later run of this one) see the seeded state again.
-          cy.request('PATCH', `/api/admin/products/${summary!.id}`, {
-            ...editable,
-            status: 'PUBLISHED',
-          }).then(() => {
-            cy.visit('/');
-            cy.contains('Cascade Mechanical Keyboard');
+      cy.findAdminProductId('Cascade Mechanical Keyboard').then((id) => {
+        cy.request(`/api/admin/products/${id}`).then((getResponse) => {
+          const body = getResponse.body as {
+            description: string;
+            seoTitle: string;
+            seoDescription: string;
+          };
+          // Only the four fields PATCH accepts — the GET response also carries id/slug/name/
+          // attributes, and the schema is .strict(), so spreading the whole body would be
+          // rejected as an attempt to write the read-only fields.
+          cy.request('PATCH', `/api/admin/products/${id}`, {
+            description: body.description,
+            seoTitle: body.seoTitle,
+            seoDescription: body.seoDescription,
+            status: 'DRAFT',
           });
         });
       });
+
+      // Gone from the catalogue and 404 on its page — no ISR window, per force-dynamic.
+      cy.visit('/');
+      cy.contains('Cascade Mechanical Keyboard').should('not.exist');
+
+      cy.request({ url: '/products/mechanical-keyboard', failOnStatusCode: false })
+        .its('status')
+        .should('eq', 404);
     });
   });
 });

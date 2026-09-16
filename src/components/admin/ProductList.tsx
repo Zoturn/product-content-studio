@@ -24,22 +24,25 @@ export function ProductList() {
     >
       {(products) => (
         <List sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-          {products.map((product) => (
-            <ListItemButton
-              key={product.id}
-              component={Link}
-              href={`/admin/products/${product.id}`}
-              divider
-            >
-              <ListItemText primary={product.name} />
-              <Chip
-                label={product.status === ProductStatus.PUBLISHED ? 'Published' : 'Draft'}
-                color={product.status === ProductStatus.PUBLISHED ? 'success' : 'default'}
-                size="small"
-                variant={product.status === ProductStatus.PUBLISHED ? 'filled' : 'outlined'}
-              />
-            </ListItemButton>
-          ))}
+          {products.map((product) => {
+            const isPublished = product.status === ProductStatus.PUBLISHED;
+            return (
+              <ListItemButton
+                key={product.id}
+                component={Link}
+                href={`/admin/products/${product.id}`}
+                divider
+              >
+                <ListItemText primary={product.name} />
+                <Chip
+                  label={isPublished ? 'Published' : 'Draft'}
+                  color={isPublished ? 'success' : 'default'}
+                  size="small"
+                  variant={isPublished ? 'filled' : 'outlined'}
+                />
+              </ListItemButton>
+            );
+          })}
           {products.length === 0 && (
             <Typography color="text.secondary" sx={{ p: 2 }}>
               No products yet.

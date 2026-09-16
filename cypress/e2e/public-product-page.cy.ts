@@ -18,31 +18,37 @@ describe('public product page', () => {
     );
   });
 
-  it('renders a script payload in the description as inert text, not executable markup', () => {
-    const payload = 'Safe text. <script>window.__xssProof = true;</script> More safe text.';
-
-    cy.loginAsAdmin();
-    cy.request('/api/admin/products').then((listResponse) => {
-      const product = (listResponse.body as Array<{ id: string; name: string }>).find(
-        (p) => p.name === 'Aurora Wireless Mouse',
-      );
-
-      cy.request('PATCH', `/api/admin/products/${product!.id}`, {
-        description: payload,
-        seoTitle: 'Aurora Wireless Mouse — Silent, Long-Battery Mouse',
-        seoDescription:
-          'Quiet wireless mouse with up to 70 days of battery, adjustable DPI, and three-device pairing.',
-        status: 'PUBLISHED',
-      });
+  // Nested so the restore hook covers only the test that actually persists a save, and still
+  // runs if that test fails partway through. The two tests above assert against wireless-mouse's
+  // seeded description, and the database is reset once per run rather than per spec — without
+  // this, running the suite and running this spec alone would not agree.
+  describe('with a script payload saved as the description', () => {
+    afterEach(() => {
+      cy.restoreSeededProduct('Aurora Wireless Mouse');
     });
 
-    cy.visit('/products/wireless-mouse');
+    it('renders it as inert text, not executable markup', () => {
+      const payload = 'Safe text. <script>window.__xssProof = true;</script> More safe text.';
 
-    // The payload is visible as literal text...
-    cy.contains('<script>window.__xssProof = true;</script>');
-    // ...and never actually ran.
-    cy.window().then((win) => {
-      expect((win as unknown as { __xssProof?: boolean }).__xssProof).to.eq(undefined);
+      cy.loginAsAdmin();
+      cy.findAdminProductId('Aurora Wireless Mouse').then((id) => {
+        cy.request('PATCH', `/api/admin/products/${id}`, {
+          description: payload,
+          seoTitle: 'Aurora Wireless Mouse — Silent, Long-Battery Mouse',
+          seoDescription:
+            'Quiet wireless mouse with up to 70 days of battery, adjustable DPI, and three-device pairing.',
+          status: 'PUBLISHED',
+        });
+      });
+
+      cy.visit('/products/wireless-mouse');
+
+      // The payload is visible as literal text...
+      cy.contains('<script>window.__xssProof = true;</script>');
+      // ...and never actually ran.
+      cy.window().then((win) => {
+        expect((win as unknown as { __xssProof?: boolean }).__xssProof).to.eq(undefined);
+      });
     });
   });
 });

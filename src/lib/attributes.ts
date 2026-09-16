@@ -9,3 +9,12 @@ export function asAttributeEntries(attributes: unknown): [string, unknown][] {
   }
   return [];
 }
+
+// The admin editor and the public product page both render the characteristics as one summary
+// line. Keeping the separator here rather than at each call site is what stops the two sides
+// drifting into formatting the same data differently.
+export function formatAttributes(attributes: unknown): string {
+  return asAttributeEntries(attributes)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(' · ');
+}

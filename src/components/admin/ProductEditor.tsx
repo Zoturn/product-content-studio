@@ -26,7 +26,7 @@ import {
 } from '@/lib/api/adminProducts';
 import { ApiError } from '@/lib/api/client';
 import { QueryState } from '@/components/admin/QueryState';
-import { asAttributeEntries } from '@/lib/attributes';
+import { formatAttributes } from '@/lib/attributes';
 
 export function ProductEditor({ productId }: { productId: string }) {
   const queryClient = useQueryClient();
@@ -48,6 +48,20 @@ export function ProductEditor({ productId }: { productId: string }) {
   );
 }
 
+// The four writable fields in the shape react-hook-form holds them. Used for both the initial
+// defaultValues and the post-save re-baseline, so a fifth editable field cannot be added to one
+// and forgotten in the other.
+function toFormValues(
+  product: Pick<AdminProduct, 'description' | 'seoTitle' | 'seoDescription' | 'status'>,
+): ProductUpdateInput {
+  return {
+    description: product.description,
+    seoTitle: product.seoTitle,
+    seoDescription: product.seoDescription,
+    status: product.status,
+  };
+}
+
 function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () => void }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -61,12 +75,7 @@ function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () =
     formState: { errors, isDirty },
   } = useForm<ProductUpdateInput>({
     resolver: zodResolver(productUpdateSchema),
-    defaultValues: {
-      description: product.description,
-      seoTitle: product.seoTitle,
-      seoDescription: product.seoDescription,
-      status: product.status,
-    },
+    defaultValues: toFormValues(product),
   });
 
   // One subscription for all three counted fields instead of three, each re-subscribing to the
@@ -97,12 +106,7 @@ function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () =
       // formState.isDirty stays true forever after the first edit, and the unsaved-changes
       // warning (beforeunload above, handleBackClick below) fires even right after a
       // successful save. See the "isDirty never resets" finding from the full-project review.
-      reset({
-        description: updated.description,
-        seoTitle: updated.seoTitle,
-        seoDescription: updated.seoDescription,
-        status: updated.status,
-      });
+      reset(toFormValues(updated));
     },
     onError: (error) => {
       if (error instanceof ApiError && error.fieldErrors) {
@@ -127,15 +131,27 @@ function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () =
     router.push('/admin/products');
   }
 
-  // mutation.isSuccess already reflects "the last save succeeded and nothing has been
-  // resubmitted since" on its own — calling mutate() again flips it back to pending
-  // immediately, so a separate "did we just save" state would only ever duplicate it.
-  const showSavedBanner = mutation.isSuccess;
+  // isSuccess alone is not enough: it stays true while the user types their next edit, leaving a
+  // green "Saved." sitting above unsaved changes. That reads as "this is persisted" and invites
+  // dismissing the leave-without-saving prompt. onSuccess re-baselines the form, so isDirty
+  // turning true again means precisely "there are edits newer than the last save".
+  const showSavedBanner = mutation.isSuccess && !isDirty;
 
   let generalError: string | null = null;
   if (mutation.isError) {
     if (mutation.error instanceof ApiError) {
-      generalError = mutation.error.code === 'VALIDATION_ERROR' ? null : mutation.error.message;
+      // A validation error is normally shown against the field that caused it, so a banner
+      // would only repeat it. But not every validation error HAS a field: a .strict() rejection
+      // carries no field path, and validationErrorFromZod folds that into the message precisely
+      // so it isn't lost. Suppressing the banner unconditionally would lose it again and fail
+      // the save with nothing at all on screen. This mirrors onError's own filter, so the
+      // banner hides exactly when a field is going to show the message instead.
+      const aFieldWillShowIt =
+        mutation.error.code === 'VALIDATION_ERROR' &&
+        Object.keys(mutation.error.fieldErrors ?? {}).some(
+          (field) => field in productUpdateSchema.shape,
+        );
+      generalError = aFieldWillShowIt ? null : mutation.error.message;
     } else {
       generalError = 'Something went wrong. Your edits have not been lost — try saving again.';
     }
@@ -151,9 +167,7 @@ function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () =
         {product.name}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
-        {asAttributeEntries(product.attributes)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(' · ')}
+        {formatAttributes(product.attributes)}
       </Typography>
 
       <Stack component="form" onSubmit={onSubmit} spacing={3} noValidate>
@@ -201,6 +215,8 @@ function EditorForm({ product, onSaved }: { product: AdminProduct; onSaved: () =
           select
           label="Status"
           defaultValue={product.status}
+          error={!!errors.status}
+          helperText={errors.status?.message}
           disabled={mutation.isPending}
           {...register('status')}
         >

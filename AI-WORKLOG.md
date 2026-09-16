@@ -54,8 +54,8 @@ See `feat(auth): add sign-in/out, JWT session cookie, and the admin guard`.
 
 ### 2. A test that was flaky for a genuinely subtle reason
 
-A Cypress test tampered with a JWT by flipping its last character and asserting the token then
-failed verification. It passed most of the time and failed occasionally. The cause: a 256-bit HMAC
+A Jest test (`src/lib/auth/session.spec.ts`) tampered with a JWT by flipping its last character and
+asserting the token then failed verification. It passed most of the time and failed occasionally. The cause: a 256-bit HMAC
 signature doesn't divide evenly into base64's 3-byte encoding groups, so the _final_ character of
 the signature carries mostly zero-padding rather than real signature bits — flipping it can decode
 to the exact same bytes, leaving the "tampered" token still valid. I had the assistant explain the
@@ -104,6 +104,36 @@ Docker build stage had neither set. The fix adds build-time placeholder values (
 receives the real values at runtime, since the environment module re-validates on every process
 start, not just once at build time). Confirmed working end-to-end afterward: catalogue, public API,
 and admin sign-in all tested against the fully containerized stack.
+
+### 6. The test suite could not see its own most important guarantee
+
+After everything above was finished, merged, and green, I ran the `/code-review` and `/simplify`
+passes across the whole project one final time — not on the diff, on everything — to find out what
+a completed, fully-tested project still gets wrong. The most interesting result was not a bug in
+the application at all. It was a blind spot in the tests.
+
+Admin routes are guarded twice on purpose: `middleware.ts` matches `/api/admin/:path*`, and every
+handler additionally calls `requireAdmin()` itself. Every test of unauthenticated access goes over
+real HTTP — which means the middleware answers all of them before the handler ever runs. Delete
+the `requireAdmin()` call from a route handler and all 28 end-to-end tests still pass. The
+redundancy that the whole auth design rests on was, in testing terms, invisible.
+
+That is not theoretical here. This project shipped `middleware.ts` at the repo root for a while,
+where Next silently never registers it (example 1 above) — and during that window the in-handler
+checks were the only thing between a signed-out request and admin data. The suite gave no signal
+either way. The fix is a Jest test that calls the exported handlers directly, with no middleware
+in the path, and asserts both that they answer 401 and that they never reach the data layer.
+
+The same pass also found a stale "Saved." banner that stayed on screen while the user typed their
+next edit (a false confirmation sitting above unsaved changes — the exact failure the project's
+own UI rules exist to prevent), a second Cypress spec mutating a shared fixture without restoring
+it, and one of my own unit tests that asserted a mock returns what the mock was told to return and
+would have passed just as happily with the security filter it claimed to cover deleted outright.
+
+The general lesson I take from it: a green suite measures the code the tests reach, and the places
+it does not reach are exactly where a second layer of defence tends to live. "All tests pass" and
+"the guarantees hold" are different claims, and it took deliberately asking a different question —
+what would still pass if I broke this on purpose? — to tell them apart.
 
 ## Where I'd push back if I were reviewing this
 

@@ -12,22 +12,7 @@ describe('editing a product', () => {
   // the whole suite (see .claude/rules/testing.md rule 6: the reset happens once, before the
   // run, not per spec).
   afterEach(() => {
-    cy.request('/api/admin/products').then((listResponse) => {
-      const product = (listResponse.body as Array<{ id: string; name: string }>).find(
-        (p) => p.name === 'Aurora Wireless Mouse',
-      );
-      cy.request('PATCH', `/api/admin/products/${product!.id}`, {
-        description:
-          'A quiet, low-latency mouse built for long sessions at a desk or on the move. The ' +
-          'contoured shape supports a relaxed grip, and the silent switches hold up over years of ' +
-          'daily clicking without the click noise. Pairs with up to three devices and switches ' +
-          'between them with a single button.',
-        seoTitle: 'Aurora Wireless Mouse — Silent, Long-Battery Mouse',
-        seoDescription:
-          'Quiet wireless mouse with up to 70 days of battery, adjustable DPI, and three-device pairing.',
-        status: 'PUBLISHED',
-      });
-    });
+    cy.restoreSeededProduct('Aurora Wireless Mouse');
   });
 
   it('saves an edit and persists it across a reload', () => {
@@ -45,6 +30,27 @@ describe('editing a product', () => {
 
     cy.reload();
     cy.get('textarea[name="description"]').should('have.value', updated);
+  });
+
+  // Regression test. The success banner was driven by mutation.isSuccess alone, which stays true
+  // while the user carries on typing — leaving a green "Saved." above changes that were not
+  // saved. That is a false confirmation of exactly the kind .claude/rules/ui-and-ux-states.md
+  // rule 5 forbids: someone who sees it and dismisses the leave-without-saving prompt loses the
+  // edit. Found by a full-project review pass after this feature had shipped green.
+  it('withdraws the success banner as soon as the user edits again after saving', () => {
+    cy.get('textarea[name="description"]').clear();
+    cy.get('textarea[name="description"]')
+      .invoke('val', 'Saved once, then edited again.')
+      .trigger('input');
+    cy.contains('button', 'Save').click();
+
+    cy.contains('Saved.');
+
+    // A further edit means there are now unsaved changes again.
+    cy.get('input[name="seoTitle"]').clear();
+    cy.get('input[name="seoTitle"]').invoke('val', 'An unsaved SEO title').trigger('input');
+
+    cy.contains('Saved.').should('not.exist');
   });
 
   it('refuses an over-limit description, shows the error on the field, keeps the typed value, and shows no success', () => {

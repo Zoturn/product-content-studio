@@ -26,6 +26,37 @@ const eslintConfig = [
       'next-env.d.ts',
     ],
   },
+  {
+    // .claude/rules/prisma-data-model.md rules 2-4 require every product query to live in the
+    // service layer, so the published-only filter is written once where it can be reviewed
+    // rather than restated at each call site. Without this rule that is a convention, held up
+    // by whoever is reading the diff; with it, the boundary fails the build instead. Pages,
+    // route handlers and components go through src/lib/services/**, which is the only place
+    // allowed to import the client directly.
+    files: ['src/app/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/lib/prisma',
+              message:
+                'Query through src/lib/services/** instead. A where clause written here is a ' +
+                'status filter that can be forgotten — see .claude/rules/prisma-data-model.md.',
+            },
+            {
+              name: '@prisma/client',
+              importNames: ['PrismaClient'],
+              message:
+                'Never construct a PrismaClient outside src/lib/prisma.ts. Importing types or ' +
+                'the ProductStatus enum from @prisma/client is fine.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

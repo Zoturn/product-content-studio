@@ -99,12 +99,19 @@ describe('getPublishedProductBySlug', () => {
   });
 
   it('resolves null for a draft slug, exactly as for an unknown slug', async () => {
-    // The query itself excludes drafts, so Prisma finding nothing IS the draft case — this
-    // test documents that null covers both "draft" and "doesn't exist" from the caller's side.
+    // Asserting only "mock returns null, so function returns null" would pass even if the
+    // status filter were deleted — it would prove nothing about draft exclusion. So this also
+    // asserts the constraint is in the query, which is what actually makes the two cases
+    // indistinguishable to a caller: a draft is not found for the same reason a typo is.
     mockedFindFirst.mockResolvedValueOnce(null);
 
     const result = await getPublishedProductBySlug('smart-desk-lamp');
 
     expect(result).toBeNull();
+    expect(mockedFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { slug: 'smart-desk-lamp', status: 'PUBLISHED' },
+      }),
+    );
   });
 });

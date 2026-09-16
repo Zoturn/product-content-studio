@@ -3,11 +3,8 @@ describe('product editing API enforcement', () => {
 
   beforeEach(() => {
     cy.loginAsAdmin();
-    cy.request('/api/admin/products').then((res) => {
-      const product = (res.body as Array<{ id: string; name: string }>).find(
-        (p) => p.name === 'Aurora Wireless Mouse',
-      );
-      productId = product!.id;
+    cy.findAdminProductId('Aurora Wireless Mouse').then((id) => {
+      productId = id;
     });
   });
 
@@ -58,7 +55,7 @@ describe('product editing API enforcement', () => {
     });
   });
 
-  it('refuses a payload carrying the read-only attributes field', () => {
+  it('refuses a payload carrying the read-only attributes field, and leaves them unchanged', () => {
     cy.request({
       method: 'PATCH',
       url: `/api/admin/products/${productId}`,
@@ -73,6 +70,13 @@ describe('product editing API enforcement', () => {
     }).then((response) => {
       expect(response.status).to.eq(400);
       expect(response.body.error.code).to.eq('VALIDATION_ERROR');
+    });
+
+    // Closing the loop, as the read-only name test above does: a 400 proves the request was
+    // refused, not that nothing was written. Only re-reading proves the latter, and that is the
+    // assertion that would catch a future refactor validating after the write instead of before.
+    cy.request(`/api/admin/products/${productId}`).then((after) => {
+      expect(after.body.attributes.color).to.eq('Graphite');
     });
   });
 });

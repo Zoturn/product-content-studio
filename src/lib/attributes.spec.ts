@@ -1,4 +1,4 @@
-import { asAttributeEntries } from './attributes';
+import { asAttributeEntries, formatAttributes } from './attributes';
 
 describe('asAttributeEntries', () => {
   it('returns entries for a plain object', () => {
@@ -23,5 +23,20 @@ describe('asAttributeEntries', () => {
   it('returns an empty array for a primitive', () => {
     expect(asAttributeEntries('not an object')).toEqual([]);
     expect(asAttributeEntries(42)).toEqual([]);
+  });
+});
+
+describe('formatAttributes', () => {
+  it('joins entries as "key: value" separated by a middle dot', () => {
+    expect(formatAttributes({ color: 'Graphite', weight: '78 g' })).toBe(
+      'color: Graphite · weight: 78 g',
+    );
+  });
+
+  it('returns an empty string when there is nothing to format', () => {
+    // The admin editor and the public page both render this straight into a Typography, so the
+    // empty case has to be a harmless empty line rather than "undefined" or "[object Object]".
+    expect(formatAttributes(null)).toBe('');
+    expect(formatAttributes({})).toBe('');
   });
 });

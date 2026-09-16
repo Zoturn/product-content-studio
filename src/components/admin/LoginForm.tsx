@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,6 @@ type LoginResponse = { email: string };
 
 export function LoginForm() {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -37,15 +35,19 @@ export function LoginForm() {
       router.push('/admin');
       router.refresh();
     },
-    onError: (error) => {
-      // Typed field values stay put — only the error banner changes. See
-      // .claude/rules/ui-and-ux-states.md.
-      setServerError(error instanceof ApiError ? error.message : 'Something went wrong.');
-    },
   });
 
+  // Derived rather than held in state: useMutation already clears `error` the moment mutate() is
+  // called, so a separate useState would only be a second copy of this to keep in sync. Typed
+  // field values stay put either way — only the banner changes. See
+  // .claude/rules/ui-and-ux-states.md.
+  const serverError = mutation.isError
+    ? mutation.error instanceof ApiError
+      ? mutation.error.message
+      : 'Something went wrong.'
+    : null;
+
   const onSubmit = handleSubmit((values) => {
-    setServerError(null);
     mutation.mutate(values);
   });
 
